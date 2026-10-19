@@ -10,9 +10,9 @@ TOKEN = "8931279643:AAEfFxtfC-Jun48iZ0pje2YctIEjmkzryEY"
 bot = Bot(token=TOKEN)
 dp = Dispatcher()
 
-# --- БАЗА ДАНИХ ---
+# --- БАЗА ДАНИХ (Нова версія) ---
 def init_db():
-    conn = sqlite3.connect("l2_adeos.db")
+    conn = sqlite3.connect("l2_v3.db")
     cursor = conn.cursor()
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS players (
@@ -31,7 +31,7 @@ def init_db():
             m_atk INTEGER DEFAULT 20,
             p_def INTEGER DEFAULT 30,
             m_def INTEGER DEFAULT 20,
-            adena INTEGER DEFAULT 10000,
+            adena INTEGER DEFAULT 15000,
             donate_coins INTEGER DEFAULT 10,
             weapon TEXT DEFAULT 'Short Sword',
             weapon_enchant INTEGER DEFAULT 0,
@@ -47,7 +47,7 @@ def init_db():
 init_db()
 
 def get_player(user_id):
-    conn = sqlite3.connect("l2_adeos.db")
+    conn = sqlite3.connect("l2_v3.db")
     cursor = conn.cursor()
     cursor.execute("SELECT * FROM players WHERE user_id = ?", (user_id,))
     row = cursor.fetchone()
@@ -55,7 +55,7 @@ def get_player(user_id):
     return row
 
 def register_player(user_id, username, race, p_class):
-    conn = sqlite3.connect("l2_adeos.db")
+    conn = sqlite3.connect("l2_v3.db")
     cursor = conn.cursor()
     cursor.execute("""
         INSERT OR REPLACE INTO players 
@@ -66,7 +66,7 @@ def register_player(user_id, username, race, p_class):
     conn.close()
 
 def update_player(user_id, **kwargs):
-    conn = sqlite3.connect("l2_adeos.db")
+    conn = sqlite3.connect("l2_v3.db")
     cursor = conn.cursor()
     set_query = ", ".join([f"{k} = ?" for k in kwargs.keys()])
     values = list(kwargs.values()) + [user_id]
@@ -74,7 +74,7 @@ def update_player(user_id, **kwargs):
     conn.commit()
     conn.close()
 
-# --- ГОЛОВНЕ МЕНЮ ---
+# --- КЛАВІАТУРИ ---
 def main_kb():
     return ReplyKeyboardMarkup(
         keyboard=[
@@ -90,9 +90,10 @@ def main_kb():
 async def cmd_start(message: Message):
     player = get_player(message.from_user.id)
     if player:
-        await message.answer_photo(
-            photo="https://images.wallpapersden.com/image/download/lineage-2-interlude_bGptbm6UmZqaraWkpJRmZmdlrWJnZWU.jpg",
-            caption=f"⚔️ **Adeos Mobile Lineage 2**\nВітаємо, **{player[1]}**!\nКлас: **{player[3]}** | Рівень: **{player[5]}**",
+        await message.answer(
+            f"⚔️ **Adeos Mobile Lineage 2**\n\n"
+            f"Вітаємо, **{player[1]}**!\n"
+            f"Клас: **{player[3]}** | Рівень: **{player[5]}**",
             reply_markup=main_kb(),
             parse_mode="Markdown"
         )
@@ -102,9 +103,8 @@ async def cmd_start(message: Message):
             [InlineKeyboardButton(text="🧛 Dark Elf", callback_data="race_DarkElf"), InlineKeyboardButton(text="👹 Orc", callback_data="race_Orc")],
             [InlineKeyboardButton(text="🧔 Dwarf", callback_data="race_Dwarf")]
         ])
-        await message.answer_photo(
-            photo="https://images.wallpapersden.com/image/download/lineage-2-interlude_bGptbm6UmZqaraWkpJRmZmdlrWJnZWU.jpg",
-            caption="👑 **Створення персонажа в Adeos L2:**\nОберіть расу вашого героя:",
+        await message.answer(
+            "👑 **Створення персонажа в Adeos L2:**\nОберіть расу вашого героя:",
             reply_markup=kb,
             parse_mode="Markdown"
         )
@@ -122,7 +122,7 @@ async def process_race(call: CallbackQuery):
     kb = InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text=c, callback_data=f"class_{race}_{c}")] for c in classes.get(race, [])
     ])
-    await call.message.edit_caption(caption=f"Раса: **{race}**. Оберіть початковий фах:", reply_markup=kb, parse_mode="Markdown")
+    await call.message.edit_text(f"Раса: **{race}**. Оберіть початковий фах:", reply_markup=kb, parse_mode="Markdown")
 
 @dp.callback_query(F.data.startswith("class_"))
 async def process_class(call: CallbackQuery):
@@ -130,9 +130,11 @@ async def process_class(call: CallbackQuery):
     race, p_class = parts[1], parts[2]
     register_player(call.from_user.id, call.from_user.first_name, race, p_class)
     await call.message.delete()
-    await call.message.answer_photo(
-        photo="https://images.wallpapersden.com/image/download/lineage-2-interlude_bGptbm6UmZqaraWkpJRmZmdlrWJnZWU.jpg",
-        caption=f"🎉 **Персонажа створено!**\nРаса: **{race}**\nКлас: **{p_class}**\nСтартовий бонус: 15,000 Adena & 100 Soulshots!",
+    await call.message.answer(
+        f"🎉 **Персонажа створено!**\n"
+        f"Раса: **{race}**\n"
+        f"Клас: **{p_class}**\n"
+        f"Стартовий бонус: 15,000 Adena & 100 Soulshots!",
         reply_markup=main_kb(),
         parse_mode="Markdown"
     )
@@ -145,9 +147,8 @@ async def farm_menu(message: Message):
         [InlineKeyboardButton(text="💀 Death Pass (20-40)", callback_data="farm_2")],
         [InlineKeyboardButton(text="🔥 Dragon Valley (40-76)", callback_data="farm_3")]
     ])
-    await message.answer_photo(
-        photo="https://wallpapercave.com/wp/wp1946059.jpg",
-        caption="⚔️ **Локації Фарму & Спойлу Adeos:**\nОбирайте зону по своєму рівню:",
+    await message.answer(
+        "⚔️ **Локації Фарму & Спойлу Adeos:**\nОбирайте зону по своєму рівню:",
         reply_markup=kb,
         parse_mode="Markdown"
     )
@@ -188,21 +189,18 @@ async def process_farm(call: CallbackQuery):
     spoil_text = f"\n📦 Спойл: +{iron_g} Iron Ore, +{varnish_g} Varnish" if (iron_g or varnish_g) else ""
     await call.answer(f"⚔️ Пофармили! {shot_text}\n+ {exp_g} EXP | + {adena_g:,} Adena{spoil_text}", show_alert=True)
 
-# --- 2. ЗАТОЧКА СУВОРКА (+1..+16) ---
+# --- 2. ЗАТОЧКА (+1..+16) ---
 @dp.message(F.text == "✨ Заточка (+1..16)")
 async def enchant_menu(message: Message):
     p = get_player(message.from_user.id)
     kb = InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="📜 Заточити Weapon Scroll (10,000 Adena)", callback_data="enchant_wpn")]
     ])
-    await message.answer_photo(
-        photo="https://i.ytimg.com/vi/3yS6X8V9Svw/maxresdefault.jpg",
-        caption=(
-            f"✨ **Заточка Зброї Adeos:**\n"
-            f"Поточна зброя: **{p[17]} (+{p[18]})**\n"
-            f"Атака (P.Atk): **{p[11]}**\n\n"
-            f"⚠️ *Шанс заточки: +1..+3 (100%), далі — 66%. При фейлі заточка скидається до +0!*"
-        ),
+    await message.answer(
+        f"✨ **Заточка Зброї Adeos:**\n"
+        f"Поточна зброя: **{p[17]} (+{p[18]})**\n"
+        f"Атака (P.Atk): **{p[11]}**\n\n"
+        f"⚠️ *Шанс заточки: +1..+3 (100%), далі — 66%. При фейлі заточка скидається до +0!*",
         reply_markup=kb,
         parse_mode="Markdown"
     )
@@ -238,15 +236,12 @@ async def craft_menu(message: Message):
         [InlineKeyboardButton(text="⚡ Зкрафтити 100 Soulshots (5 Iron + 5 Varnish)", callback_data="craft_shots")],
         [InlineKeyboardButton(text="🗡 Зкрафтити Dual Swords (50 Iron + 50 Varnish)", callback_data="craft_duals")]
     ])
-    await message.answer_photo(
-        photo="https://wallpapercave.com/wp/wp3261763.jpg",
-        caption=(
-            f"🛠 **Кузня та Крафт Adeos:**\n"
-            f"Ваші ресурси:\n"
-            f"🪵 Iron Ore: **{p[21]}** шт.\n"
-            f"🧪 Varnish: **{p[22]}** шт.\n"
-            f"⚡ Soulshots: **{p[20]}** шт."
-        ),
+    await message.answer(
+        f"🛠 **Кузня та Крафт Adeos:**\n"
+        f"Ваші ресурси:\n"
+        f"🪵 Iron Ore: **{p[21]}** шт.\n"
+        f"🧪 Varnish: **{p[22]}** шт.\n"
+        f"⚡ Soulshots: **{p[20]}** шт.",
         reply_markup=kb,
         parse_mode="Markdown"
     )
@@ -293,12 +288,7 @@ async def quest_menu(message: Message):
         text += "⏳ Продовжуйте качати рівень, щоб відкрити наступну профу!"
 
     kb = InlineKeyboardMarkup(inline_keyboard=kb_list) if kb_list else None
-    await message.answer_photo(
-        photo="https://images.wallpapersden.com/image/download/lineage-2-interlude_bGptbm6UmZqaraWkpJRmZmdlrWJnZWU.jpg",
-        caption=text,
-        reply_markup=kb,
-        parse_mode="Markdown"
-    )
+    await message.answer(text, reply_markup=kb, parse_mode="Markdown")
 
 @dp.callback_query(F.data.startswith("prof_"))
 async def process_prof(call: CallbackQuery):
@@ -319,12 +309,7 @@ async def pvp_menu(message: Message):
         [InlineKeyboardButton(text="⚔️ Викликати Гладиатора (NPC)", callback_data="pvp_npc")],
         [InlineKeyboardButton(text="🏆 Великий Турнір Олімпіади", callback_data="pvp_olympiad")]
     ])
-    await message.answer_photo(
-        photo="https://wallpapercave.com/wp/wp1946075.jpg",
-        caption="🏟 **Колізей та PvP Арена Adeos:**\nЗмагайтеся за звання Героя та очки слави!",
-        reply_markup=kb,
-        parse_mode="Markdown"
-    )
+    await message.answer("🏟 **Колізей та PvP Арена Adeos:**\nЗмагайтеся за звання Героя та очки слави!", reply_markup=kb, parse_mode="Markdown")
 
 @dp.callback_query(F.data.startswith("pvp_"))
 async def process_pvp(call: CallbackQuery):
@@ -356,11 +341,7 @@ async def profile_handler(message: Message):
         f"🪵 Iron Ore: **{p[21]}** | 🧪 Varnish: **{p[22]}**\n"
         f"💰 Adena: **{p[15]:,}**"
     )
-    await message.answer_photo(
-        photo="https://wallpapercave.com/wp/wp1946059.jpg",
-        caption=text,
-        parse_mode="Markdown"
-    )
+    await message.answer(text, parse_mode="Markdown")
 
 async def main():
     print("🚀 Adeos Lineage 2 Bot Запущений!")
